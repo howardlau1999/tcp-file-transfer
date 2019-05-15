@@ -81,6 +81,8 @@ int main(int argc, char *argv[]) {
     struct epoll_event events[MAX_EVENTS];
     struct request *reqs = malloc(sizeof(struct request) * conns);
 
+    printf("starting %d data connections...\n", conns);
+
     for (int i = 0; i < conns; ++i) {
         int data_fd = connect_to(HOST, DATA_PORT);
         set_non_blocking(data_fd);
@@ -98,6 +100,10 @@ int main(int argc, char *argv[]) {
 
         epoll_ctl(epoll_fd, EPOLL_CTL_ADD, data_fd, &data_event);
     }
+
+    struct timeval tik, tok;
+
+    gettimeofday(&tik, NULL);
 
     while (1) {
         int nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
@@ -130,7 +136,11 @@ int main(int argc, char *argv[]) {
                 }
             }
         }
-        printf("\rBytes received: %d/%ld", numbytes, meta.filelen);
+
+        gettimeofday(&tok, NULL);
+        uint64_t elapsed = (tok.tv_usec + tok.tv_sec * 1000000) - (tik.tv_usec + tik.tv_sec * 1000000);
+        printf("\rBytes received: %d/%ld  Speed: %.2lf bytes/sec", numbytes,
+               meta.filelen, (double)numbytes / elapsed * 1000000);
         fflush(stdout);
         if (numbytes >= meta.filelen) break;
     }
