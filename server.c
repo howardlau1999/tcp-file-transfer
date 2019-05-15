@@ -159,10 +159,15 @@ int main(int argc, char *argv[]) {
                 struct request *req = malloc(sizeof(struct request));
                 req->fd = new_fd;
                 struct epoll_event data_event = {0};
-                data_event.events = EPOLLIN;
+                data_event.events = EPOLLIN | EPOLLRDHUP;
                 data_event.data.ptr = req;
 
                 epoll_ctl(epoll_fd, EPOLL_CTL_ADD, new_fd, &data_event);
+            } else if (event.events & EPOLLRDHUP) {
+                struct request *req = event.data.ptr;
+                printf("Fd: %d unexpectedly closed", req->fd);
+                close(req->fd);
+                free(req);
             } else if (event.events & EPOLLIN) {
                 struct request *req = event.data.ptr;
                 struct request req_recv;
@@ -174,7 +179,7 @@ int main(int argc, char *argv[]) {
                 printf("Fd: %d length=%ld offset=%ld\n", fd, req->length,
                        req->offset);
 
-                event.events = EPOLLOUT;
+                event.events = EPOLLOUT | EPOLLRDHUP;
                 epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event);
             } else if (event.events & EPOLLOUT) {
                 struct request *req = event.data.ptr;
@@ -183,13 +188,15 @@ int main(int argc, char *argv[]) {
                 int size = fread(
                     buffer, 1,
                     MIN(BUFFER_LEN, req->length - req->progress.written), fp);
-                while ((n = send(fd, buffer, size, 0)) > 0 && size > 0 && req->progress.written < req->length) {
+                while ((n = send(fd, buffer, size, 0)) > 0 && size > 0 &&
+                       req->progress.written < req->length) {
                     req->progress.written += n;
                     size -= n;
                 }
 
                 if (req->progress.written == req->length) {
                     printf("fd %d finished, closing\n", fd);
+                    free(req);
                     close(fd);
                     epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, &event);
                 }
