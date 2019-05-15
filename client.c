@@ -139,8 +139,8 @@ int main(int argc, char *argv[]) {
 
         gettimeofday(&tok, NULL);
         uint64_t elapsed = (tok.tv_usec + tok.tv_sec * 1000000) - (tik.tv_usec + tik.tv_sec * 1000000);
-        printf("\rBytes received: %d/%ld  Speed: %.2lf bytes/sec", numbytes,
-               meta.filelen, (double)numbytes / elapsed * 1000000);
+        printf("\rBytes received: %d/%ld  Speed: %.2lf bytes/sec Elapsed: %.2lf seconds", numbytes,
+               meta.filelen, (double)numbytes / elapsed * 1000000, (double)elapsed / 1000000);
         fflush(stdout);
         if (numbytes >= meta.filelen) break;
     }
