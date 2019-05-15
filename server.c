@@ -179,16 +179,13 @@ int main(int argc, char *argv[]) {
             } else if (event.events & EPOLLOUT) {
                 struct request *req = event.data.ptr;
                 int fd = req->fd;
-                printf("Write %d\n", fd);
                 fseek(fp, req->offset + req->progress.written, SEEK_SET);
                 int size = fread(
                     buffer, 1,
                     MIN(BUFFER_LEN, req->length - req->progress.written), fp);
-                while ((n = send(fd, buffer, size, 0)) > 0) {
+                while ((n = send(fd, buffer, size, 0)) > 0 && size > 0 && req->progress.written < req->length) {
                     req->progress.written += n;
-                    printf("fd %d, written=%ld, offset=%ld\n", fd,
-                           req->progress.written, req->offset);
-                    if (req->progress.written == req->length) break;
+                    size -= n;
                 }
 
                 if (req->progress.written == req->length) {

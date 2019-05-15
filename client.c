@@ -48,7 +48,7 @@ int main(int argc, char *argv[]) {
 
     int conns = 8;
 
-    if (argc != 4) {
+    if (argc != 4 && argc != 5) {
         fprintf(stderr, "usage: %s hostname port filename [conns]\n", argv[0]);
         exit(1);
     }
@@ -112,7 +112,6 @@ int main(int argc, char *argv[]) {
             int fd = req->fd;
             if (event.events & EPOLLOUT) {
                 int n = send(fd, req, sizeof(struct request), 0);
-                printf("fd %d sent, %d\n", fd, n);
                 event.events = EPOLLIN;
                 epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &event);
             } else if (event.events & EPOLLIN) {
@@ -131,7 +130,7 @@ int main(int argc, char *argv[]) {
                 }
             }
         }
-        printf("\nBytes: %d", numbytes);
+        printf("\rBytes received: %d/%ld", numbytes, meta.filelen);
         fflush(stdout);
         if (numbytes >= meta.filelen) break;
     }
@@ -140,4 +139,41 @@ int main(int argc, char *argv[]) {
     printf("File transfer finished\n");
 
     fclose(fp);
+
+    int n = 0, filelen = 0;
+    fp = fopen(argv[3], "r");
+
+    puts("");
+
+    unsigned char buffer[BUFFER_LEN];
+    puts("Calculating SHA1...");
+    // Caculate SHA1 and length of the file
+    sha1_ctx cx[1];
+    unsigned char hval[SHA1_DIGEST_SIZE];
+
+    sha1_begin(cx);
+    while ((n = fread(buffer, 1, BUFFER_LEN, fp)) != 0) {
+        sha1_hash(buffer, n, cx);
+        filelen += n;
+    }
+    sha1_end(hval, cx);
+
+    if (filelen != meta.filelen) {
+        printf("File Length mismatched!\n");
+        exit(1);
+    }
+
+    if (memcmp(hval, meta.sha1, SHA1_DIGEST_SIZE)) {
+        printf("SHA1 mismatched!");
+        printf("Expected: ");
+        print_hex(meta.sha1, SHA1_DIGEST_SIZE);
+        puts("");
+
+        printf("Actual: ");
+        print_hex(hval, SHA1_DIGEST_SIZE);
+        puts("");
+        exit(1);
+    }
+
+    puts("Everything seems ok.");
 }
