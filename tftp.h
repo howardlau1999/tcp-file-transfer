@@ -23,7 +23,7 @@
 #include <unistd.h>
 #include "libsha1.h"
 
-#define BUFFER_LEN 1024
+#define BUFFER_LEN 4096
 #define MAX_WINDOW 4096
 #define MAX_EVENTS 32
 #define MAX_CONNS 32
