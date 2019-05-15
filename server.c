@@ -165,7 +165,7 @@ int main(int argc, char *argv[]) {
                 epoll_ctl(epoll_fd, EPOLL_CTL_ADD, new_fd, &data_event);
             } else if (event.events & EPOLLRDHUP) {
                 struct request *req = event.data.ptr;
-                printf("Fd: %d unexpectedly closed", req->fd);
+                printf("Fd: %d unexpectedly closed\n", req->fd);
                 close(req->fd);
                 free(req);
             } else if (event.events & EPOLLIN) {
